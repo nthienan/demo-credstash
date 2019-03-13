@@ -1,0 +1,10 @@
+# IDEs
+.vscode
+
+# Terraform
+.terraform
+**/*.tfstate*
+
+# Key
+**/*.pub
+keys
