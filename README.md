@@ -122,21 +122,21 @@ Secrets are stored by `credstash` are versioned and immutable. That means you ca
 $ credstash put app1.db.password 1234567
 app1.db.password version 0000000000000000001 is already in the credential store. Use the -v flag to specify a new version
 ```
-Now try again with `-a` option:
-```bash
-$ credstash put app1.db.password 1234567 -a
-app1.db.password has been stored
-```
+  Now try again with `-a` option:
+  ```bash
+  $ credstash put app1.db.password 1234567 -a
+  app1.db.password has been stored
+  ```
 - As a `reader`, we will list secret to see versioning:
 ```bash
 $ credstash list
 app1.db.password -- version 0000000000000000001 -- comment
 app1.db.password -- version 0000000000000000002 -- comment
 ```
-Additionally, we can get value of a secret at specified version:
-```bash
-$ credstash get app1.db.password -v 0000000000000000001
-123456
-$ credstash get app1.db.password -v 0000000000000000002
-1234567
-```
+  Additionally, we can get value of a secret at specified version:
+  ```bash
+  $ credstash get app1.db.password -v 0000000000000000001
+  123456
+  $ credstash get app1.db.password -v 0000000000000000002
+  1234567
+  ```
