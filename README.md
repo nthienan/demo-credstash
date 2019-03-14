@@ -8,7 +8,7 @@ In order to use `credstash` we need to provision below AWS services:
 
 Follow these steps in order to spin up a credstash system.
 
-### 1. Provisioning AWS services for `credstash`
+## 1. Provisioning AWS services for `credstash`
 
 Using terrform for automatically provision all necsessary services. Run command below:
 ```bash
@@ -33,7 +33,7 @@ credstash_writer_access_key = AKIAJVSI5YYCWLBTLG3A
 credstash_writer_secret_key = eU54vhEoSVQhB2MCejosnMi4HgZPJeXvFAmG4bCj
 ```
 
-### 2. Install `credstash` on your machine
+## 2. Install `credstash` on your machine
 - For Debian and Ubuntu, the following command will ensure that the required dependencies are installed
 ```bash
 sudo apt-get install build-essential libssl-dev libffi-dev python-dev
@@ -47,7 +47,7 @@ sudo yum install gcc libffi-devel python-devel openssl-devel
 sudo pip install credstash
 ```
 
-## Demo
+## 3. Explore functionalities
 ### 1. Basic operations
 - Create a secret: As a user (`writer`) who has write permissions, you can store a secret into `credstash` system.
 ```bash
@@ -115,28 +115,101 @@ server1.ssh_key  -- version 0000000000000000001 -- comment
   app1.db.password -- version 0000000000000000001 -- comment
   ``` 
   
-### 2. Versioning secret-s
+### 2. Versioning secrets
 Secrets are stored by `credstash` are versioned and immutable. That means you cannot change value of a secret when it's already put. However, you can change the value by storing a new version of that secret by specify `-v <version>` or `-a` for automatically increase.
 - As a `writer` try to change value of a secret that already put:
 ```bash
 $ credstash put app1.db.password 1234567
 app1.db.password version 0000000000000000001 is already in the credential store. Use the -v flag to specify a new version
 ```
-  Now try again with `-a` option:
-  ```bash
-  $ credstash put app1.db.password 1234567 -a
-  app1.db.password has been stored
-  ```
+Now try again with `-a` option:
+```bash
+$ credstash put app1.db.password 1234567 -a
+app1.db.password has been stored
+```
 - As a `reader`, we will list secret to see versioning:
 ```bash
 $ credstash list
 app1.db.password -- version 0000000000000000001 -- comment
 app1.db.password -- version 0000000000000000002 -- comment
 ```
-  Additionally, we can get value of a secret at specified version:
-  ```bash
-  $ credstash get app1.db.password -v 0000000000000000001
-  123456
-  $ credstash get app1.db.password -v 0000000000000000002
-  1234567
-  ```
+Additionally, we can get value of a secret at specified version:
+```bash
+$ credstash get app1.db.password -v 0000000000000000001
+123456
+$ credstash get app1.db.password -v 0000000000000000002
+1234567
+```
+### 3. Controlling access secrets
+`credstash` has a way for constraining access to a given secret. When storing a secret, we can provide any number of **Encryption Context** key value pair to associate with the secret. The exact encryption context key value pair that were associated with the secret when it was `put` must be provided in the `get` request to successfully decrypt the secret.
+- As a `writer` put a secret with encryption context:
+```bash
+$ credstash put app2.db.password 123456 tier=db env=dev
+app2.db.password has been stored
+```
+- As a `reader` get that secret back
+```bash
+$ credstash get app2.db.password
+KMS ERROR: Could not decrypt hmac key with KMS. The encryption context provided may not match the one used when the credential was stored.
+```
+It throws an error due to missing encryption context. Now we provide extract encryption context in oder to get the secret back.
+```bash
+$ credstash get app2.db.password tier=db env=dev
+123456
+```
+**Encryption context** is great, right? But what if you want restrict someone access some secret even they know encryption context. Fortunately, it's possible with encryption context and proper configuration. Let review a scenario like below.
+I have two group: devloper and tester. I want developers are able to `put` and `get` secrets with encryption context `role=dev` only. Likewise, testers are able to `put` and `get` secrets with encryption context `role=qa`
+- As a `dev` put a secret without encryption context `role=dev`
+```bash
+$ credstash put app3.db.password 123456 tier=db env=dev
+Traceback (most recent call last):
+  File "/home/nthienan/.ven/bin/credstash.py", line 79, in generate_key_data
+    KeyId=self.key_id, EncryptionContext=self.encryption_context, NumberOfBytes=number_of_bytes
+  File "/home/nthienan/.ven/lib/python3.6/site-packages/botocore/client.py", line 357, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/home/nthienan/.ven/lib/python3.6/site-packages/botocore/client.py", line 661, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (AccessDeniedException) when calling the GenerateDataKey operation: User: arn:aws:iam::<account-id>:user/credstash-dev is not authorized to perform: kms:GenerateDataKey on resource: arn:aws:kms:<region>:<account-id>:key/987ac9ed-984f-44be-8076-715df7773d53
+```
+It fails due to missing `role=dev`. Now let's try with `role=other`
+```bash
+$ credstash put app3.db.password 123456 tier=db env=dev role=other
+Traceback (most recent call last):
+  File "/home/nthienan/.ven/bin/credstash.py", line 79, in generate_key_data
+    KeyId=self.key_id, EncryptionContext=self.encryption_context, NumberOfBytes=number_of_bytes
+  File "/home/nthienan/.ven/lib/python3.6/site-packages/botocore/client.py", line 357, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/home/nthienan/.ven/lib/python3.6/site-packages/botocore/client.py", line 661, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (AccessDeniedException) when calling the GenerateDataKey operation: User: arn:aws:iam::<account-id>:user/credstash-dev is not authorized to perform: kms:GenerateDataKey on resource: arn:aws:kms:<region>:<account-id>:key/987ac9ed-984f-44be-8076-715df7773d53
+```
+It's same error and that is what we expected. Let's try with `role=dev`
+```bash
+$ credstash put app3.db.password 123456 tier=db env=dev role=dev
+app3.db.password has been stored
+```
+It's successful. Get that secret back.
+```bash
+$ credstash get app3.db.password tier=db env=dev role=dev
+123456
+```
+- As a `qa` try to get dev secret
+```bash
+$ credstash get app3.db.password tier=db env=dev role=dev
+KMS ERROR: Decryption error An error occurred (AccessDeniedException) when calling the Decrypt operation: The ciphertext refers to a customer master key that does not exist, does not exist in this region, or you are not allowed to access.
+```
+## 4. Clean up
+Because we use Terraform to provision services, so you just need to run `terraform destroy` in order to clean up.
+```bash
+$ terraform destroy
+....
+Plan: 0 to add, 0 to change, 33 to destroy.
+
+Do you really want to destroy all resources?
+  Terraform will destroy all your managed infrastructure, as shown above.
+  There is no undo. Only 'yes' will be accepted to confirm.
+
+  Enter a value: yes
+....
+Destroy complete! Resources: 33 destroyed.
+```
