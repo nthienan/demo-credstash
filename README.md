@@ -201,7 +201,7 @@ KMS ERROR: Decryption error An error occurred (AccessDeniedException) when calli
 ## 4. Clean up
 Because we use Terraform to provision services, so you just need to run `terraform destroy` in order to clean up.
 ```bash
-$ terraform destroy
+$ terraform destroy -var-file tfvars/demo.tfvars
 ....
 Plan: 0 to add, 0 to change, 33 to destroy.
 
