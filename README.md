@@ -1,6 +1,7 @@
 # **Secret Management System - CredStash**
 
-This project aims to demonstrate [`credstash`](https://github.com/fugue/credstash) tool for secret management.
+This project aims to demonstrate [`credstash`](https://github.com/fugue/credstash) tool for secret management. There is a slide for quick introduction to `credstash` [here](https://www.slideshare.net/thienan93/credstash).
+
 In order to use `credstash` we need to provision below AWS services:
 1. A master key in AWS Key Management Service (KMS), where it is stored in secure HSM-backed storage. The Master Key never leaves the KMS service.
 2. A DynamoDB table used for storing credentials.
@@ -113,8 +114,8 @@ server1.ssh_key  -- version 0000000000000000001 -- comment
   Deleting server1.ssh_key -- version 0000000000000000001
   $ credstash list
   app1.db.password -- version 0000000000000000001 -- comment
-  ``` 
-  
+  ```
+
 ### 2. Versioning secrets
 Secrets are stored by `credstash` are versioned and immutable. That means you cannot change value of a secret when it's already put. However, you can change the value by storing a new version of that secret by specify `-v <version>` or `-a` for automatically increase.
 - As a `writer` try to change value of a secret that already put:
